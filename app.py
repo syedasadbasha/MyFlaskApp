@@ -26,8 +26,8 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 app.secret_key = 'your_secret_key_change_me'
 
 # Email Configuration (Update these with your credentials)
-EMAIL_SENDER = 'your_email@gmail.com'
-EMAIL_PASSWORD = 'your_app_password'  # Gmail App Password
+EMAIL_SENDER = 'syed.velcomecity@gmail.com'
+EMAIL_PASSWORD = 'Rajiyabee@1'  # Gmail App Password
 
 # WhatsApp Configuration (Using Twilio)
 WHATSAPP_ACCOUNT_SID = 'your_twilio_account_sid'
