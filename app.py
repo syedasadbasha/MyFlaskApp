@@ -99,7 +99,7 @@ def number_to_words(amount):
     paise = round((amount - rupees) * 100)
     
     if rupees == 0:
-        words = 'Zero Rupees'
+        words = 'Zero Rupees Only'
     else:
         words = ''
         scale_index = 0
@@ -121,8 +121,11 @@ def number_to_words(amount):
         
         words = words.strip() + ' Rupees'
     
+    # Only add paise if it's greater than 0
     if paise > 0:
-        words += ' and ' + convert_hundreds(paise) + ' Paise'
+        words = words.replace(' Rupees', '') + ' Rupees and ' + convert_hundreds(paise) + ' Paise'
+    else:
+        words += ' Only'  # Add "Only" when no paise
     
     return words
 

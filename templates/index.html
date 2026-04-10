@@ -622,10 +622,12 @@
             const rupees = Math.floor(amount);
             const paise = Math.round((amount - rupees) * 100);
             
+            let words;
+            
             if (rupees === 0) {
-                var words = 'Zero Rupees';
+                words = 'Zero Rupees Only';
             } else {
-                let words = '';
+                words = '';
                 let num = rupees;
                 const scales = ['', 'Thousand', 'Lakh', 'Crore'];
                 const chunks = [];
@@ -648,8 +650,11 @@
                 words = words.trim() + ' Rupees';
             }
             
+            // Only add paise if it's greater than 0
             if (paise > 0) {
-                words += ' and ' + convertHundreds(paise) + ' Paise';
+                words = words.replace(' Rupees', '') + ' Rupees and ' + convertHundreds(paise) + ' Paise';
+            } else {
+                words += ' Only';
             }
             
             return words;
