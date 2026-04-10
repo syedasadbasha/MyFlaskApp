@@ -1,6 +1,712 @@
-<form method="POST" action="/generate">
-  <input type="text" name="name" placeholder="Customer Name" required>
-  <input type="text" name="item" placeholder="Item" required>
-  <input type="number" name="price" placeholder="Price" required>
-  <button type="submit">Generate Invoice</button>
-</form>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GST Invoice Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1f4788 0%, #2d5aa0 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 0;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-btn.active {
+            color: #1f4788;
+            border-bottom-color: #1f4788;
+            background: white;
+        }
+        
+        .tab-btn:hover {
+            background: white;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #1f4788;
+            box-shadow: 0 0 0 3px rgba(31, 71, 136, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #1f4788 0%, #2d5aa0 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(31, 71, 136, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+        
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 30px;
+        }
+        
+        .invoice-table th {
+            background: #1f4788;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .invoice-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .invoice-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .invoice-table .amount {
+            text-align: right;
+            font-weight: 500;
+            color: #28a745;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        .status-draft {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-saved {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-sent {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .items-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .item-row {
+            display: grid;
+            grid-template-columns: 3fr 1fr 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: end;
+        }
+        
+        .item-row input {
+            padding: 8px;
+        }
+        
+        .remove-item {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .remove-item:hover {
+            background: #c82333;
+        }
+        
+        .add-item-btn {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .add-item-btn:hover {
+            background: #218838;
+        }
+        
+        .summary-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #1f4788;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .summary-row.total {
+            font-weight: bold;
+            font-size: 1.3em;
+            color: #1f4788;
+            border-top: 2px solid #ddd;
+            padding-top: 10px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #666;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row,
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+            
+            .item-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .tab-btn {
+                flex: 0 1 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 GST Invoice Manager</h1>
+            <p>Professional Invoice Management System for India</p>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('company')">🏢 Company</button>
+            <button class="tab-btn" onclick="switchTab('invoice')">➕ Create Invoice</button>
+            <button class="tab-btn" onclick="switchTab('invoices')">📊 All Invoices</button>
+        </div>
+        
+        <!-- Company Tab -->
+        <div id="company" class="tab-content active">
+            <h2>Company Details</h2>
+            <p style="color: #666; margin-bottom: 20px;">Set up your company information for invoices</p>
+            
+            <form method="POST" action="/company/add" enctype="multipart/form-data">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Company Name *</label>
+                        <input type="text" name="company_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>GST Number</label>
+                        <input type="text" name="gst_number" placeholder="27AABCR5055K1Z0">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="company_email">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" name="company_phone">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea name="company_address" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Company Logo</label>
+                    <input type="file" name="company_logo" accept="image/*">
+                    <small style="color: #666;">Max 16MB | Formats: JPG, PNG, GIF</small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">💾 Save Company Details</button>
+            </form>
+            
+            {% if companies %}
+            <div style="margin-top: 40px;">
+                <h3>Saved Companies</h3>
+                <div style="margin-top: 20px;">
+                    {% for company in companies %}
+                    <div class="summary-box">
+                        <strong>{{ company.name }}</strong>
+                        {% if company.gst_number %}<br>GST: {{ company.gst_number }}{% endif %}
+                        {% if company.email %}<br>Email: {{ company.email }}{% endif %}
+                        {% if company.phone %}<br>Phone: {{ company.phone }}{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Create Invoice Tab -->
+        <div id="invoice" class="tab-content">
+            <h2>Create New Invoice</h2>
+            <p style="color: #666; margin-bottom: 20px;">Generate professional invoices with automatic GST calculation</p>
+            
+            <form method="POST" action="/invoice/create" id="invoiceForm">
+                <div class="two-column">
+                    <div>
+                        <h3 style="margin-bottom: 15px;">Customer Details</h3>
+                        <div class="form-group">
+                            <label>Company</label>
+                            <select name="company_id">
+                                <option value="">Select Company (Optional)</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}">{{ company.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Customer Name *</label>
+                            <input type="text" name="customer_name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" name="customer_email">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="tel" name="customer_phone">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Address</label>
+                            <textarea name="customer_address" rows="3"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 style="margin-bottom: 15px;">Invoice Settings</h3>
+                        <div class="form-group">
+                            <label>GST Rate (%)</label>
+                            <select name="gst_rate" onchange="recalculateGST()">
+                                <option value="5">5% (Essentials)</option>
+                                <option value="12">12% (Standard)</option>
+                                <option value="18" selected>18% (Regular)</option>
+                                <option value="28">28% (Luxury)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Notes</label>
+                            <textarea name="notes" rows="3" placeholder="Payment terms, thank you message, etc."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 style="margin-top: 30px; margin-bottom: 15px;">Invoice Items</h3>
+                <div class="items-section" id="itemsContainer">
+                    <div class="item-row">
+                        <input type="text" name="item_description[]" placeholder="Item Description" required>
+                        <input type="number" name="item_quantity[]" placeholder="Qty" step="0.01" required>
+                        <input type="number" name="item_price[]" placeholder="Price" step="0.01" required>
+                        <input type="number" name="item_amount[]" placeholder="Amount" readonly style="background: #e9ecef;">
+                        <button type="button" class="remove-item" onclick="removeItem(this)">Remove</button>
+                    </div>
+                </div>
+                <button type="button" class="add-item-btn" onclick="addItem()">+ Add Item</button>
+                
+                <div class="summary-box" style="margin-top: 30px;">
+                    <div class="summary-row">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">₹0.00</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>GST (<span id="gstPercentage">18</span>%):</span>
+                        <span id="gstAmount">₹0.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>TOTAL:</span>
+                        <span id="totalAmount">₹0.00</span>
+                    </div>
+                </div>
+                
+                <div class="action-buttons" style="margin-top: 30px;">
+                    <button type="submit" class="btn btn-primary">✅ Create Invoice</button>
+                    <button type="reset" class="btn btn-secondary">🔄 Reset Form</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- All Invoices Tab -->
+        <div id="invoices" class="tab-content">
+            <h2>All Invoices</h2>
+            
+            {% if invoices %}
+            <table class="invoice-table">
+                <thead>
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>GST</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in invoices %}
+                    <tr>
+                        <td><strong>{{ invoice.invoice_number }}</strong></td>
+                        <td>{{ invoice.customer_name }}</td>
+                        <td>{{ invoice.created_at.strftime('%d-%m-%Y') }}</td>
+                        <td class="amount">₹{{ "%.2f"|format(invoice.subtotal) }}</td>
+                        <td class="amount">₹{{ "%.2f"|format(invoice.gst_amount) }}</td>
+                        <td class="amount"><strong>₹{{ "%.2f"|format(invoice.total) }}</strong></td>
+                        <td><span class="status-badge status-{{ invoice.status }}">{{ invoice.status.upper() }}</span></td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="/invoice/{{ invoice.id }}" class="btn btn-primary btn-small">View</a>
+                                <a href="/invoice/{{ invoice.id }}/pdf" class="btn btn-success btn-small">📥 PDF</a>
+                                {% if invoice.customer_email %}
+                                <button class="btn btn-secondary btn-small" onclick="sendEmail({{ invoice.id }}, '{{ invoice.customer_email }}')">📧 Email</button>
+                                {% endif %}
+                                <button class="btn btn-danger btn-small" onclick="deleteInvoice({{ invoice.id }})">🗑️ Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <h3>No invoices yet</h3>
+                <p>Create your first invoice to get started!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active from all buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            
+            // Mark button as active
+            event.target.classList.add('active');
+        }
+        
+        function addItem() {
+            const container = document.getElementById('itemsContainer');
+            const itemRow = document.createElement('div');
+            itemRow.className = 'item-row';
+            itemRow.innerHTML = `
+                <input type="text" name="item_description[]" placeholder="Item Description" required>
+                <input type="number" name="item_quantity[]" placeholder="Qty" step="0.01" required onchange="calculateAmounts()">
+                <input type="number" name="item_price[]" placeholder="Price" step="0.01" required onchange="calculateAmounts()">
+                <input type="number" name="item_amount[]" placeholder="Amount" readonly style="background: #e9ecef;">
+                <button type="button" class="remove-item" onclick="removeItem(this)">Remove</button>
+            `;
+            container.appendChild(itemRow);
+        }
+        
+        function removeItem(button) {
+            button.parentElement.remove();
+            calculateAmounts();
+        }
+        
+        function calculateAmounts() {
+            const form = document.getElementById('invoiceForm');
+            const descriptions = form.querySelectorAll('input[name="item_description[]"]');
+            const quantities = form.querySelectorAll('input[name="item_quantity[]"]');
+            const prices = form.querySelectorAll('input[name="item_price[]"]');
+            const amounts = form.querySelectorAll('input[name="item_amount[]"]');
+            
+            let subtotal = 0;
+            
+            for (let i = 0; i < descriptions.length; i++) {
+                const qty = parseFloat(quantities[i].value) || 0;
+                const price = parseFloat(prices[i].value) || 0;
+                const amount = qty * price;
+                amounts[i].value = amount.toFixed(2);
+                subtotal += amount;
+            }
+            
+            const gstRate = parseFloat(form.querySelector('select[name="gst_rate"]').value);
+            const gstAmount = subtotal * gstRate / 100;
+            const total = subtotal + gstAmount;
+            
+            document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
+            document.getElementById('gstAmount').textContent = '₹' + gstAmount.toFixed(2);
+            document.getElementById('totalAmount').textContent = '₹' + total.toFixed(2);
+        }
+        
+        function recalculateGST() {
+            calculateAmounts();
+            const gstRate = document.querySelector('select[name="gst_rate"]').value;
+            document.getElementById('gstPercentage').textContent = gstRate;
+        }
+        
+        function sendEmail(invoiceId, email) {
+            if (!email) {
+                alert('No email address available');
+                return;
+            }
+            
+            fetch(`/invoice/${invoiceId}/send-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email: email })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Invoice sent successfully!');
+                    location.reload();
+                } else {
+                    alert('❌ Error: ' + data.message);
+                }
+            });
+        }
+        
+        function deleteInvoice(invoiceId) {
+            if (confirm('Are you sure you want to delete this invoice?')) {
+                fetch(`/invoice/${invoiceId}/delete`, {
+                    method: 'DELETE'
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Invoice deleted');
+                        location.reload();
+                    } else {
+                        alert('❌ Error deleting invoice');
+                    }
+                });
+            }
+        }
+        
+        // Enable calculations when form loads
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateAmounts();
+        });
+        
+        // Attach event listeners to existing items
+        document.querySelectorAll('input[name="item_quantity[]"], input[name="item_price[]"]').forEach(input => {
+            input.addEventListener('change', calculateAmounts);
+        });
+    </script>
+</body>
+</html>
