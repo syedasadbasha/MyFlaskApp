@@ -575,6 +575,9 @@
                                 {% if invoice.customer_email %}
                                 <button class="btn btn-secondary btn-small" onclick="sendEmail({{ invoice.id }}, '{{ invoice.customer_email }}')">📧 Email</button>
                                 {% endif %}
+                                {% if invoice.customer_phone %}
+                                <button class="btn btn-small" onclick="sendWhatsApp({{ invoice.id }}, '{{ invoice.customer_phone }}')" style="background: #25D366; color: white;">💬 WA</button>
+                                {% endif %}
                                 <button class="btn btn-danger btn-small" onclick="deleteInvoice({{ invoice.id }})">🗑️ Delete</button>
                             </div>
                         </td>
@@ -748,7 +751,31 @@
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    alert('✅ Invoice sent successfully!');
+                    alert('✅ Invoice sent via email successfully!');
+                    location.reload();
+                } else {
+                    alert('❌ Error: ' + data.message);
+                }
+            });
+        }
+        
+        function sendWhatsApp(invoiceId, phone) {
+            if (!phone) {
+                alert('No phone number available');
+                return;
+            }
+            
+            fetch(`/invoice/${invoiceId}/send-whatsapp`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ phone: phone })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Invoice sent via WhatsApp successfully!');
                     location.reload();
                 } else {
                     alert('❌ Error: ' + data.message);

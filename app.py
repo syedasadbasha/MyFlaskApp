@@ -25,6 +25,15 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 app.secret_key = 'your_secret_key_change_me'
 
+# Email Configuration (Update these with your credentials)
+EMAIL_SENDER = 'your_email@gmail.com'
+EMAIL_PASSWORD = 'your_app_password'  # Gmail App Password
+
+# WhatsApp Configuration (Using Twilio)
+WHATSAPP_ACCOUNT_SID = 'your_twilio_account_sid'
+WHATSAPP_AUTH_TOKEN = 'your_twilio_auth_token'
+WHATSAPP_PHONE_NUMBER = '+14155552671'  # Twilio WhatsApp sandbox number
+
 # Create upload folder
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -57,7 +66,6 @@ class Invoice(db.Model):
     status = db.Column(db.String(20), default='draft')
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    due_date = db.Column(db.DateTime)
 
 class InvoiceItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -145,11 +153,8 @@ def calculate_gst(amount, gst_rate):
 def send_email(recipient_email, subject, body, pdf_file=None):
     """Send email with optional PDF attachment"""
     try:
-        sender_email = "your_email@gmail.com"  # Change this
-        sender_password = "your_app_password"  # Change this (use app password for Gmail)
-        
         message = MIMEMultipart()
-        message["From"] = sender_email
+        message["From"] = EMAIL_SENDER
         message["To"] = recipient_email
         message["Subject"] = subject
         
@@ -164,12 +169,34 @@ def send_email(recipient_email, subject, body, pdf_file=None):
                 message.attach(part)
         
         server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-        server.login(sender_email, sender_password)
-        server.sendmail(sender_email, recipient_email, message.as_string())
+        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_SENDER, recipient_email, message.as_string())
         server.quit()
         return True
     except Exception as e:
         print(f"Email Error: {str(e)}")
+        return False
+
+def send_whatsapp(phone_number, message_text, pdf_file=None):
+    """Send WhatsApp message using Twilio"""
+    try:
+        from twilio.rest import Client
+        client = Client(WHATSAPP_ACCOUNT_SID, WHATSAPP_AUTH_TOKEN)
+        
+        # Ensure phone number is in correct format
+        if not phone_number.startswith('+'):
+            phone_number = '+91' + phone_number  # India country code
+        
+        # Send WhatsApp message
+        message = client.messages.create(
+            body=message_text,
+            from_=f'whatsapp:{WHATSAPP_PHONE_NUMBER}',
+            to=f'whatsapp:{phone_number}'
+        )
+        
+        return True
+    except Exception as e:
+        print(f"WhatsApp Error: {str(e)}")
         return False
 
 def generate_pdf_invoice(invoice_id):
@@ -371,7 +398,7 @@ def create_invoice():
             customer_address=customer_address,
             gst_rate=gst_rate,
             notes=notes,
-            due_date=datetime.now() + timedelta(days=30)
+            status='draft'
         )
         
         db.session.add(invoice)
@@ -462,9 +489,47 @@ def send_invoice_email(invoice_id):
         if success:
             invoice.status = 'sent'
             db.session.commit()
-            return jsonify({'success': True, 'message': 'Invoice sent successfully'})
+            return jsonify({'success': True, 'message': 'Invoice sent successfully via email'})
         else:
             return jsonify({'success': False, 'message': 'Failed to send email'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/invoice/<int:invoice_id>/send-whatsapp', methods=['POST'])
+def send_invoice_whatsapp(invoice_id):
+    """Send invoice via WhatsApp"""
+    try:
+        data = request.json
+        phone_number = data.get('phone')
+        
+        invoice = Invoice.query.get(invoice_id)
+        if not invoice:
+            return jsonify({'success': False, 'message': 'Invoice not found'})
+        
+        if not phone_number:
+            return jsonify({'success': False, 'message': 'Phone number not provided'})
+        
+        message_text = f"""
+Hello {invoice.customer_name},
+
+Your Invoice: {invoice.invoice_number}
+
+Invoice Details:
+📍 Subtotal: ₹{invoice.subtotal:.2f}
+📍 GST ({invoice.gst_rate}%): ₹{invoice.gst_amount:.2f}
+📍 Total Amount: ₹{invoice.total:.2f}
+
+Thank you for your business!
+        """
+        
+        success = send_whatsapp(phone_number, message_text)
+        
+        if success:
+            invoice.status = 'sent'
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Invoice sent successfully via WhatsApp'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to send WhatsApp message'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 

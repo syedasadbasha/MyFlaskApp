@@ -267,6 +267,9 @@
             {% if invoice.customer_email %}
             <button class="btn btn-primary" onclick="sendEmail()">📧 Send Email</button>
             {% endif %}
+            {% if invoice.customer_phone %}
+            <button class="btn btn-success" onclick="sendWhatsApp()" style="background: #25D366;">💬 Send WhatsApp</button>
+            {% endif %}
             <button class="btn btn-primary" onclick="window.print()">🖨️ Print</button>
         </div>
         
@@ -294,7 +297,6 @@
                 <h3>Invoice Details</h3>
                 <p><strong>Invoice Number:</strong> {{ invoice.invoice_number }}</p>
                 <p><strong>Date:</strong> {{ invoice.created_at.strftime('%d %B %Y') }}</p>
-                <p><strong>Due Date:</strong> {{ invoice.due_date.strftime('%d %B %Y') if invoice.due_date else 'N/A' }}</p>
             </div>
             
             <div class="invoice-details-group">
@@ -446,7 +448,29 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        alert('✅ Invoice sent successfully!');
+                        alert('✅ Invoice sent successfully via email!');
+                        location.reload();
+                    } else {
+                        alert('❌ Error: ' + data.message);
+                    }
+                });
+            }
+        }
+        
+        function sendWhatsApp() {
+            const phone = prompt('Enter WhatsApp phone number:', '{{ invoice.customer_phone }}');
+            if (phone) {
+                fetch(`/invoice/{{ invoice.id }}/send-whatsapp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phone: phone })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Invoice sent successfully via WhatsApp!');
                         location.reload();
                     } else {
                         alert('❌ Error: ' + data.message);
