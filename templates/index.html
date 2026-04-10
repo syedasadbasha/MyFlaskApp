@@ -527,6 +527,10 @@
                         <span>TOTAL:</span>
                         <span id="totalAmount">₹0.00</span>
                     </div>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #ddd;">
+                        <span style="font-size: 0.9em; color: #555;"><strong>In Words:</strong></span>
+                        <p id="amountInWords" style="color: #2d5aa0; font-weight: 600; margin-top: 5px;">Zero Rupees</p>
+                    </div>
                 </div>
                 
                 <div class="action-buttons" style="margin-top: 30px;">
@@ -588,6 +592,69 @@
     </div>
     
     <script>
+        function numberToWords(amount) {
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            
+            function convertHundreds(num) {
+                let result = '';
+                if (num >= 100) {
+                    result += ones[Math.floor(num / 100)] + ' Hundred ';
+                    num %= 100;
+                }
+                
+                if (num >= 20) {
+                    result += tens[Math.floor(num / 10)] + ' ';
+                    num %= 10;
+                } else if (num >= 10) {
+                    result += teens[num - 10] + ' ';
+                    num = 0;
+                }
+                
+                if (num > 0) {
+                    result += ones[num] + ' ';
+                }
+                
+                return result.trim();
+            }
+            
+            const rupees = Math.floor(amount);
+            const paise = Math.round((amount - rupees) * 100);
+            
+            if (rupees === 0) {
+                var words = 'Zero Rupees';
+            } else {
+                let words = '';
+                let num = rupees;
+                const scales = ['', 'Thousand', 'Lakh', 'Crore'];
+                const chunks = [];
+                
+                while (num > 0) {
+                    chunks.push(num % 1000);
+                    num = Math.floor(num / 1000);
+                }
+                
+                for (let i = chunks.length - 1; i >= 0; i--) {
+                    if (chunks[i] !== 0) {
+                        words += convertHundreds(chunks[i]);
+                        if (i > 0) {
+                            words += ' ' + scales[i];
+                        }
+                        words += ' ';
+                    }
+                }
+                
+                words = words.trim() + ' Rupees';
+            }
+            
+            if (paise > 0) {
+                words += ' and ' + convertHundreds(paise) + ' Paise';
+            }
+            
+            return words;
+        }
+        
         function switchTab(tabName) {
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -649,6 +716,9 @@
             document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
             document.getElementById('gstAmount').textContent = '₹' + gstAmount.toFixed(2);
             document.getElementById('totalAmount').textContent = '₹' + total.toFixed(2);
+            
+            // Update amount in words
+            document.getElementById('amountInWords').textContent = numberToWords(total);
         }
         
         function recalculateGST() {

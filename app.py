@@ -68,6 +68,64 @@ class InvoiceItem(db.Model):
     amount = db.Column(db.Float)
 
 # Helper Functions
+def number_to_words(amount):
+    """Convert amount to Indian currency words"""
+    ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+    tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+    teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+    
+    scales = ['', 'Thousand', 'Lakh', 'Crore']
+    
+    def convert_hundreds(num):
+        result = ''
+        if num >= 100:
+            result += ones[num // 100] + ' Hundred '
+            num %= 100
+        
+        if num >= 20:
+            result += tens[num // 10] + ' '
+            num %= 10
+        elif num >= 10:
+            result += teens[num - 10] + ' '
+            num = 0
+        
+        if num > 0:
+            result += ones[num] + ' '
+        
+        return result.strip()
+    
+    # Split into rupees and paise
+    rupees = int(amount)
+    paise = round((amount - rupees) * 100)
+    
+    if rupees == 0:
+        words = 'Zero Rupees'
+    else:
+        words = ''
+        scale_index = 0
+        
+        while rupees > 0:
+            if rupees % 1000 != 0:
+                chunk = rupees % 1000
+                if scale_index == 0:
+                    words = convert_hundreds(chunk) + ' ' + words
+                elif scale_index == 1:
+                    words = convert_hundreds(chunk) + ' Thousand ' + words
+                elif scale_index == 2:
+                    words = convert_hundreds(chunk) + ' Lakh ' + words
+                elif scale_index == 3:
+                    words = convert_hundreds(chunk) + ' Crore ' + words
+            
+            rupees //= 1000
+            scale_index += 1
+        
+        words = words.strip() + ' Rupees'
+    
+    if paise > 0:
+        words += ' and ' + convert_hundreds(paise) + ' Paise'
+    
+    return words
+
 def generate_invoice_number():
     """Generate unique invoice number"""
     last_invoice = Invoice.query.order_by(Invoice.id.desc()).first()
@@ -221,6 +279,11 @@ def generate_pdf_invoice(invoice_id):
         ('PADDING', (0, 0), (-1, -1), 8),
     ]))
     story.append(totals_table)
+    story.append(Spacer(1, 0.1*inch))
+    
+    # Amount in words
+    amount_words = number_to_words(invoice.total)
+    story.append(Paragraph(f"<b>Amount in Words:</b> {amount_words}", styles['Normal']))
     
     if invoice.notes:
         story.append(Spacer(1, 0.2*inch))
