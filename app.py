@@ -180,6 +180,13 @@ def send_email(recipient_email, subject, body, pdf_file=None):
 def send_whatsapp(phone_number, message_text, pdf_file=None):
     """Send WhatsApp message using Twilio"""
     try:
+        # Check if Twilio credentials are configured
+        if not WHATSAPP_ACCOUNT_SID or WHATSAPP_ACCOUNT_SID == 'your_twilio_account_sid':
+            return False, "WhatsApp not configured. Please set Twilio credentials in app.py"
+        
+        if not WHATSAPP_AUTH_TOKEN or WHATSAPP_AUTH_TOKEN == 'your_twilio_auth_token':
+            return False, "WhatsApp not configured. Please set Twilio credentials in app.py"
+        
         from twilio.rest import Client
         client = Client(WHATSAPP_ACCOUNT_SID, WHATSAPP_AUTH_TOKEN)
         
@@ -194,10 +201,11 @@ def send_whatsapp(phone_number, message_text, pdf_file=None):
             to=f'whatsapp:{phone_number}'
         )
         
-        return True
+        return True, "WhatsApp message sent successfully"
     except Exception as e:
-        print(f"WhatsApp Error: {str(e)}")
-        return False
+        error_msg = str(e)
+        print(f"WhatsApp Error: {error_msg}")
+        return False, f"WhatsApp Error: {error_msg}"
 
 def generate_pdf_invoice(invoice_id):
     """Generate PDF invoice"""
@@ -522,16 +530,16 @@ Invoice Details:
 Thank you for your business!
         """
         
-        success = send_whatsapp(phone_number, message_text)
+        success, message = send_whatsapp(phone_number, message_text)
         
         if success:
             invoice.status = 'sent'
             db.session.commit()
-            return jsonify({'success': True, 'message': 'Invoice sent successfully via WhatsApp'})
+            return jsonify({'success': True, 'message': message})
         else:
-            return jsonify({'success': False, 'message': 'Failed to send WhatsApp message'})
+            return jsonify({'success': False, 'message': message})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': f"Error: {str(e)}"})
 
 @app.route('/invoice/<int:invoice_id>/delete', methods=['DELETE'])
 def delete_invoice(invoice_id):
