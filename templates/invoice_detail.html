@@ -336,8 +336,12 @@
                     <span>₹{{ "%.2f" % invoice.subtotal }}</span>
                 </div>
                 <div class="summary-row">
-                    <span>GST ({{ "%.0f" % invoice.gst_rate }}%):</span>
-                    <span>₹{{ "%.2f" % invoice.gst_amount }}</span>
+                    <span>SGST ({{ "%.2f" % invoice.sgst_rate }}%):</span>
+                    <span>₹{{ "%.2f" % invoice.sgst_amount }}</span>
+                </div>
+                <div class="summary-row">
+                    <span>CGST ({{ "%.2f" % invoice.cgst_rate }}%):</span>
+                    <span>₹{{ "%.2f" % invoice.cgst_amount }}</span>
                 </div>
                 <div class="summary-row total">
                     <span>TOTAL:</span>

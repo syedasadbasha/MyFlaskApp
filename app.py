@@ -61,6 +61,10 @@ class Invoice(db.Model):
     items = db.Column(db.Text)  # JSON format
     subtotal = db.Column(db.Float)
     gst_rate = db.Column(db.Float, default=18.0)
+    sgst_rate = db.Column(db.Float, default=9.0)
+    cgst_rate = db.Column(db.Float, default=9.0)
+    sgst_amount = db.Column(db.Float, default=0.0)
+    cgst_amount = db.Column(db.Float, default=0.0)
     gst_amount = db.Column(db.Float)
     total = db.Column(db.Float)
     status = db.Column(db.String(20), default='draft')
@@ -147,8 +151,12 @@ def generate_invoice_number():
     return f"INV-{number}"
 
 def calculate_gst(amount, gst_rate):
-    """Calculate GST amount"""
-    return round(amount * gst_rate / 100, 2)
+    """Calculate GST amount with rounding"""
+    # SGST and CGST are calculated as half of GST rate each
+    sgst_amount = round(amount * (gst_rate / 2) / 100, 2)
+    cgst_amount = round(amount * (gst_rate / 2) / 100, 2)
+    gst_amount = round(sgst_amount + cgst_amount, 2)
+    return gst_amount, sgst_amount, cgst_amount
 
 def send_email(recipient_email, subject, body, pdf_file=None):
     """Send email with optional PDF attachment"""
@@ -301,7 +309,8 @@ def generate_pdf_invoice(invoice_id):
     # Totals
     totals_data = [
         ["Subtotal:", f"₹{invoice.subtotal:.2f}"],
-        ["GST ({:.0f}%):", f"₹{invoice.gst_amount:.2f}"],
+        ["SGST ({:.0f}%):", f"₹{invoice.sgst_amount:.2f}"],
+        ["CGST ({:.0f}%):", f"₹{invoice.cgst_amount:.2f}"],
         ["TOTAL:", f"₹{invoice.total:.2f}"]
     ]
     
@@ -420,21 +429,26 @@ def create_invoice():
         subtotal = 0
         for desc, qty, price in zip(items_data, quantities, prices):
             if desc and qty and price:
-                amount = float(qty) * float(price)
+                amount = round(float(qty) * float(price), 2)
                 subtotal += amount
                 item = InvoiceItem(
                     invoice_id=invoice.id,
                     description=desc,
-                    quantity=float(qty),
-                    unit_price=float(price),
+                    quantity=round(float(qty), 2),
+                    unit_price=round(float(price), 2),
                     amount=amount
                 )
                 db.session.add(item)
         
-        gst_amount = calculate_gst(subtotal, gst_rate)
-        total = subtotal + gst_amount
+        subtotal = round(subtotal, 2)
+        gst_amount, sgst_amount, cgst_amount = calculate_gst(subtotal, gst_rate)
+        total = round(subtotal + gst_amount, 2)
         
         invoice.subtotal = subtotal
+        invoice.sgst_rate = round(gst_rate / 2, 2)
+        invoice.cgst_rate = round(gst_rate / 2, 2)
+        invoice.sgst_amount = sgst_amount
+        invoice.cgst_amount = cgst_amount
         invoice.gst_amount = gst_amount
         invoice.total = total
         invoice.status = 'saved'
@@ -486,7 +500,8 @@ def send_invoice_email(invoice_id):
         <p><b>Invoice Details:</b></p>
         <ul>
             <li>Subtotal: ₹{invoice.subtotal:.2f}</li>
-            <li>GST ({invoice.gst_rate}%): ₹{invoice.gst_amount:.2f}</li>
+            <li>SGST ({invoice.sgst_rate:.2f}%): ₹{invoice.sgst_amount:.2f}</li>
+            <li>CGST ({invoice.cgst_rate:.2f}%): ₹{invoice.cgst_amount:.2f}</li>
             <li>Total: ₹{invoice.total:.2f}</li>
         </ul>
         <p>Thank you!</p>
@@ -524,7 +539,8 @@ Your Invoice: {invoice.invoice_number}
 
 Invoice Details:
 📍 Subtotal: ₹{invoice.subtotal:.2f}
-📍 GST ({invoice.gst_rate}%): ₹{invoice.gst_amount:.2f}
+📍 SGST ({invoice.sgst_rate:.2f}%): ₹{invoice.sgst_amount:.2f}
+📍 CGST ({invoice.cgst_rate:.2f}%): ₹{invoice.cgst_amount:.2f}
 📍 Total Amount: ₹{invoice.total:.2f}
 
 Thank you for your business!

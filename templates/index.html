@@ -520,8 +520,12 @@
                         <span id="subtotal">₹0.00</span>
                     </div>
                     <div class="summary-row">
-                        <span>GST (<span id="gstPercentage">18</span>%):</span>
-                        <span id="gstAmount">₹0.00</span>
+                        <span>SGST (<span id="sgstPercentage">9</span>%):</span>
+                        <span id="sgstAmount">₹0.00</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>CGST (<span id="cgstPercentage">9</span>%):</span>
+                        <span id="cgstAmount">₹0.00</span>
                     </div>
                     <div class="summary-row total">
                         <span>TOTAL:</span>
@@ -717,12 +721,19 @@
                 subtotal += amount;
             }
             
+            subtotal = parseFloat(subtotal.toFixed(2));
             const gstRate = parseFloat(form.querySelector('select[name="gst_rate"]').value);
-            const gstAmount = subtotal * gstRate / 100;
-            const total = subtotal + gstAmount;
+            const sgstRate = gstRate / 2;
+            const cgstRate = gstRate / 2;
+            
+            const sgstAmount = parseFloat((subtotal * sgstRate / 100).toFixed(2));
+            const cgstAmount = parseFloat((subtotal * cgstRate / 100).toFixed(2));
+            const gstAmount = parseFloat((sgstAmount + cgstAmount).toFixed(2));
+            const total = parseFloat((subtotal + gstAmount).toFixed(2));
             
             document.getElementById('subtotal').textContent = '₹' + subtotal.toFixed(2);
-            document.getElementById('gstAmount').textContent = '₹' + gstAmount.toFixed(2);
+            document.getElementById('sgstAmount').textContent = '₹' + sgstAmount.toFixed(2);
+            document.getElementById('cgstAmount').textContent = '₹' + cgstAmount.toFixed(2);
             document.getElementById('totalAmount').textContent = '₹' + total.toFixed(2);
             
             // Update amount in words
@@ -732,7 +743,8 @@
         function recalculateGST() {
             calculateAmounts();
             const gstRate = document.querySelector('select[name="gst_rate"]').value;
-            document.getElementById('gstPercentage').textContent = gstRate;
+            document.getElementById('sgstPercentage').textContent = (gstRate / 2);
+            document.getElementById('cgstPercentage').textContent = (gstRate / 2);
         }
         
         function sendEmail(invoiceId, email) {
